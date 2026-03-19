@@ -32,30 +32,27 @@
 
 # ---- 0. SETUP: PACKAGES AND DATA -------------------------------------------
 
-# Paquetes necesarios / Required packages
-library(readxl)     # Lectura de archivos Excel
-library(lavaan)     # Análisis factorial confirmatorio (CFA)
-library(semTools)   # Invarianza de medición y fiabilidad compuesta
-library(psych)      # Alpha de Cronbach y estadísticos descriptivos
+# Required packages
+library(readxl)     # Read Excel files
+library(lavaan)     # Confirmatory factor analysis (CFA)
+library(semTools)   # Measurement invariance and composite reliability
+library(psych)      # Cronbach's alpha and descriptive statistics
 
-# Lectura de datos / Load data
+# Load data
 # NOTE: Set working directory to the repository root before running,
 #       or adjust the path below.
-# NOTA: Establezca el directorio de trabajo en la raíz del repositorio
-#       antes de ejecutar, o ajuste la ruta a continuación.
 data_path <- file.path("..", "data", "COLOMBIA_ESPANHA_TOTAL.xlsx")
 dat <- readxl::read_xlsx(data_path)
 
-# Verificar dimensiones / Verify dimensions
-cat("=== Dimensiones del conjunto de datos / Dataset dimensions ===\n")
+# Verify dimensions
+cat("=== Dataset dimensions ===\n")
 cat("N =", nrow(dat), " | Variables =", ncol(dat), "\n\n")
 
-# Frecuencias por país / Frequencies by country
-cat("=== Distribución por país / Distribution by country ===\n")
+# Frequencies by country
+cat("=== Distribution by country ===\n")
 print(table(dat$País))
 cat("\n")
 
-# Ítems del IDA (13 ítems del modelo final)
 # IDA items (13 items from the final model)
 items_all <- paste0("EDA", 1:20)
 items_final <- c("EDA1", "EDA3", "EDA4", "EDA5",   # ANT
@@ -63,31 +60,28 @@ items_final <- c("EDA1", "EDA3", "EDA4", "EDA5",   # ANT
                   "EDA12", "EDA13", "EDA14",           # PONT
                   "EDA17", "EDA18", "EDA19")           # CON
 
-# Verificar que los ítems existen en los datos
 # Verify that items exist in the data
 stopifnot(all(items_final %in% names(dat)))
 
-# Convertir ítems a factores ordenados (requerido por lavaan con WLSMV)
 # Convert items to ordered factors (required by lavaan with WLSMV)
 for (item in items_final) {
   dat[[item]] <- ordered(dat[[item]])
 }
 
-cat("=== Niveles de respuesta (ejemplo: EDA1) ===\n")
+cat("=== Response levels (example: EDA1) ===\n")
 print(levels(dat$EDA1))
 cat("\n")
 
 
 # ---- 1. CFA: THREE COMPETING MODELS (TOTAL SAMPLE, N = 1037) ---------------
-# Análisis factorial confirmatorio: tres modelos competidores
-# Estimador WLSMV con ítems ordinales
+# Confirmatory factor analysis: three competing models
+# WLSMV estimator with ordinal items
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 1: CONFIRMATORY FACTOR ANALYSIS — COMPETING MODELS\n")
 cat(paste(rep("=", 70), collapse = ""), "\n\n")
 
 # --- Model 1: Two correlated factors ---
-# Modelo 1: Dos factores correlacionados
 #   APOS (retiring) = ANT + APO items
 #   CONT (continuing) = PONT + CON items
 model_2f <- '
@@ -106,8 +100,7 @@ cat("--- Model 1: Two correlated factors ---\n")
 summary(fit_2f, fit.measures = TRUE, standardized = TRUE)
 cat("\n")
 
-# --- Model 2: Four correlated factors (sin residuos correlacionados) ---
-# Modelo 2: Cuatro factores correlacionados (sin correlación de residuos)
+# --- Model 2: Four correlated factors (no correlated residuals) ---
 model_4f <- '
   ANT  =~ EDA1 + EDA3 + EDA4 + EDA5
   APO  =~ EDA7 + EDA8 + EDA9
@@ -127,17 +120,16 @@ summary(fit_4f, fit.measures = TRUE, standardized = TRUE)
 cat("\n")
 
 # --- Model 3: Four correlated factors + correlated residuals ---
-# Modelo 3: Cuatro factores correlacionados + residuos correlacionados
-# Residuos correlacionados basados en índices de modificación:
-#   EDA4 ~~ EDA5 (ambos de ANT, contenido similar)
-#   EDA12 ~~ EDA14 (ambos de PONT, contenido similar)
+# Correlated residuals based on modification indices:
+#   EDA4 ~~ EDA5 (both from ANT, similar content)
+#   EDA12 ~~ EDA14 (both from PONT, similar content)
 model_4f_cr <- '
   ANT  =~ EDA1 + EDA3 + EDA4 + EDA5
   APO  =~ EDA7 + EDA8 + EDA9
   PONT =~ EDA12 + EDA13 + EDA14
   CON  =~ EDA17 + EDA18 + EDA19
 
-  # Correlated residuals / Residuos correlacionados
+  # Correlated residuals
   EDA4  ~~ EDA5
   EDA12 ~~ EDA14
 '
@@ -155,7 +147,6 @@ cat("\n")
 
 
 # ---- 1b. FIT INDICES COMPARISON TABLE --------------------------------------
-# Tabla comparativa de índices de ajuste
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("FIT INDICES COMPARISON TABLE\n")
@@ -194,13 +185,12 @@ cat("\n")
 
 
 # ---- 2. STANDARDIZED FACTOR LOADINGS (MODEL 3) -----------------------------
-# Cargas factoriales estandarizadas del modelo final
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 2: STANDARDIZED FACTOR LOADINGS (MODEL 3)\n")
 cat(paste(rep("=", 70), collapse = ""), "\n\n")
 
-# Extraer cargas estandarizadas / Extract standardized loadings
+# Extract standardized loadings
 std_loadings <- standardizedSolution(fit_4f_cr)
 loadings_only <- std_loadings[std_loadings$op == "=~", ]
 
@@ -210,15 +200,14 @@ print(loadings_only[, c("lhs", "rhs", "est.std", "se", "z", "pvalue",
       row.names = FALSE, digits = 3)
 cat("\n")
 
-cat("Rango de cargas / Loading range:",
+cat("Loading range:",
     round(min(loadings_only$est.std), 2), "to",
     round(max(loadings_only$est.std), 2), "\n")
-cat("Media de cargas / Mean loading:",
+cat("Mean loading:",
     round(mean(loadings_only$est.std), 2), "\n\n")
 
 
 # ---- 3. FACTOR CORRELATIONS (MODEL 3) --------------------------------------
-# Correlaciones entre factores
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 3: FACTOR CORRELATIONS (MODEL 3)\n")
@@ -236,15 +225,15 @@ cat("\n")
 
 
 # ---- 4. MEASUREMENT INVARIANCE (MGCFA) ACROSS COUNTRIES --------------------
-# Invarianza de medición multigrupo entre Colombia y España
-# Usando el modelo 3 (4 factores + residuos correlacionados)
+# Multigroup measurement invariance between Colombia and Spain
+# Using Model 3 (4 factors + correlated residuals)
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 4: MEASUREMENT INVARIANCE ACROSS COUNTRIES\n")
 cat(paste(rep("=", 70), collapse = ""), "\n\n")
 
 # --- 4a. Configural invariance ---
-# Invarianza configural: misma estructura factorial en ambos grupos
+# Same factorial structure in both groups
 fit_configural <- lavaan::cfa(
   model     = model_4f_cr,
   data      = dat,
@@ -258,7 +247,7 @@ summary(fit_configural, fit.measures = TRUE, standardized = TRUE)
 cat("\n")
 
 # --- 4b. Metric (weak) invariance ---
-# Invarianza métrica: cargas factoriales iguales entre grupos
+# Equal factor loadings across groups
 fit_metric <- lavaan::cfa(
   model       = model_4f_cr,
   data        = dat,
@@ -273,7 +262,7 @@ summary(fit_metric, fit.measures = TRUE, standardized = TRUE)
 cat("\n")
 
 # --- 4c. Scalar (strong) invariance ---
-# Invarianza escalar: cargas factoriales y umbrales (thresholds) iguales
+# Equal factor loadings and thresholds across groups
 fit_scalar <- lavaan::cfa(
   model       = model_4f_cr,
   data        = dat,
@@ -288,11 +277,10 @@ summary(fit_scalar, fit.measures = TRUE, standardized = TRUE)
 cat("\n")
 
 # --- 4d. Invariance comparison table ---
-# Tabla comparativa de los modelos de invarianza
 
 cat("--- Invariance model comparison ---\n\n")
 
-# Comparación con lavaan::lavTestLRT (diferencia de chi-cuadrado robusto)
+# Robust chi-square difference test
 cat(">> Metric vs. Configural:\n")
 print(lavTestLRT(fit_configural, fit_metric))
 cat("\n")
@@ -301,7 +289,7 @@ cat(">> Scalar vs. Metric:\n")
 print(lavTestLRT(fit_metric, fit_scalar))
 cat("\n")
 
-# Tabla de ajuste para modelos de invarianza
+# Fit indices for invariance models
 inv_table <- rbind(
   extract_fit(fit_configural, "Configural"),
   extract_fit(fit_metric,     "Metric"),
@@ -312,7 +300,7 @@ cat("--- Fit indices for invariance models ---\n")
 print(inv_table, right = FALSE)
 cat("\n")
 
-# Calcular delta CFI / Compute delta CFI
+# Compute delta CFI
 cfi_vals <- inv_table$CFI
 cat("Delta CFI (Metric - Configural):", round(cfi_vals[1] - cfi_vals[2], 3), "\n")
 cat("Delta CFI (Scalar - Metric):",     round(cfi_vals[2] - cfi_vals[3], 3), "\n")
@@ -320,24 +308,21 @@ cat("Criterion: Delta CFI < .010 supports invariance (Cheung & Rensvold, 2002)\n
 
 
 # ---- 5. INTERNAL CONSISTENCY (RELIABILITY) ----------------------------------
-# Consistencia interna: Alpha de Cronbach y Omega de McDonald
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 5: INTERNAL CONSISTENCY\n")
 cat(paste(rep("=", 70), collapse = ""), "\n\n")
 
 # --- 5a. Reliability from the CFA model (semTools) ---
-# Fiabilidad basada en el modelo CFA (omega de McDonald)
+# McDonald's omega from the CFA model
 cat("--- Reliability from CFA Model 3 (total sample) ---\n")
 rel_total <- semTools::reliability(fit_4f_cr)
 print(rel_total)
 cat("\n")
 
 # --- 5b. Cronbach's alpha by factor (total sample) ---
-# Alpha de Cronbach por factor (muestra total)
 cat("--- Cronbach's alpha by factor (total sample, N = 1037) ---\n\n")
 
-# Convertir ítems a numéricos para psych::alpha
 # Convert items to numeric for psych::alpha
 dat_num <- dat
 for (item in items_final) {
@@ -362,7 +347,6 @@ cat("Total scale (13 items):        alpha =",
     round(alpha_TOTAL$total$raw_alpha, 3), "\n\n")
 
 # --- 5c. Reliability by country ---
-# Fiabilidad por país
 
 compute_alpha_by_country <- function(data, country_name, items_list) {
   sub <- data[data$País == country_name, ]
@@ -403,9 +387,8 @@ cat("\n")
 
 
 # ---- 6. MODIFICATION INDICES (MODEL 2, FOR REFERENCE) ----------------------
-# Índices de modificación del modelo de 4 factores sin residuos
-# correlacionados, para justificar la adición de las correlaciones
-# de residuos en el modelo 3
+# Modification indices from the four-factor model without correlated
+# residuals, to justify adding correlated residuals in Model 3
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 6: MODIFICATION INDICES (MODEL 2)\n")
@@ -418,20 +401,19 @@ cat("\n")
 
 
 # ---- 7. DESCRIPTIVE STATISTICS ----------------------------------------------
-# Estadísticos descriptivos de los 13 ítems
 
 cat(paste(rep("=", 70), collapse = ""), "\n")
 cat("SECTION 7: DESCRIPTIVE STATISTICS (13 ITEMS)\n")
 cat(paste(rep("=", 70), collapse = ""), "\n\n")
 
-# Usar datos numéricos / Use numeric data
+# Use numeric data
 desc_stats <- psych::describe(dat_num[, items_final])
 print(desc_stats[, c("n", "mean", "sd", "median", "min", "max",
                       "skew", "kurtosis")],
       digits = 2)
 cat("\n")
 
-# Descriptivos por país / Descriptives by country
+# Descriptives by country
 cat("--- Descriptives: Colombia ---\n")
 desc_col <- psych::describe(
   dat_num[dat_num$País == "Colômbia", items_final]
@@ -457,4 +439,4 @@ cat(paste(rep("=", 70), collapse = ""), "\n\n")
 
 sessionInfo()
 
-cat("\n\n--- Script completed successfully / Script finalizado con éxito ---\n")
+cat("\n\n--- Script completed successfully ---\n")
